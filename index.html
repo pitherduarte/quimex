@@ -1,0 +1,391 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Química Geral Experimental — Simulador de N2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#0D0F12;
+    --panel:#13171C;
+    --line:#222A32;
+    --text:#E8ECF0;
+    --muted:#7A8290;
+    --accent:#3AAE6B;
+    --pass:#6FD6A2;
+    --fail:#D6594B;
+    --warn:#D4A847;
+
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --body:'IBM Plex Sans',system-ui,sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--body);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px 80px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{width:100%;max-width:560px}
+
+  /* header — asymmetric, type-driven, no centering */
+  header{margin-bottom:40px;border-bottom:1px solid var(--line);padding-bottom:24px}
+  .kicker{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:700;
+    margin-bottom:14px;
+  }
+  h1{
+    font-family:var(--mono);
+    font-weight:800;
+    font-size:30px;
+    line-height:1.08;
+    letter-spacing:-.01em;
+  }
+  h1 .dim{color:var(--muted);font-weight:500}
+  .sub{
+    margin-top:14px;
+    color:var(--muted);
+    font-size:14px;
+    max-width:46ch;
+  }
+  .sub code{font-family:var(--mono);color:var(--text);font-size:13px}
+
+  /* inputs */
+  .field{margin-bottom:18px}
+  .field label{
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .field .hint{text-transform:none;letter-spacing:0;color:var(--muted);font-family:var(--body);font-size:12px;margin-top:6px}
+
+  input{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:18px;
+    font-weight:500;
+    padding:14px 16px;
+    border-radius:4px;
+    outline:none;
+    transition:border-color .12s ease;
+  }
+  input:focus{border-color:var(--accent)}
+  input::placeholder{color:#444E58}
+
+  .pls{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+  button{
+    width:100%;
+    margin-top:8px;
+    background:var(--accent);
+    color:#06101C;
+    border:none;
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:16px;
+    border-radius:4px;
+    cursor:pointer;
+    transition:filter .12s ease;
+  }
+  button:hover{filter:brightness(1.12)}
+  button:active{filter:brightness(.94)}
+
+  /* result */
+  .result{margin-top:36px;display:none}
+  .result.show{display:block}
+
+  .verdict{
+    border:1px solid var(--line);
+    border-left-width:3px;
+    background:var(--panel);
+    border-radius:4px;
+    padding:24px;
+    margin-bottom:22px;
+  }
+  .verdict.is-pass{border-left-color:var(--pass)}
+  .verdict.is-need{border-left-color:var(--accent)}
+  .verdict.is-fail{border-left-color:var(--fail)}
+  .verdict.is-error{border-left-color:var(--warn)}
+
+  .verdict .tag{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    font-weight:700;
+    margin-bottom:16px;
+  }
+  .is-pass .tag{color:var(--pass)}
+  .is-need .tag{color:var(--accent)}
+  .is-fail .tag{color:var(--fail)}
+  .is-error .tag{color:var(--warn)}
+
+  /* the one bold statement: enormous mono number */
+  .bignum{
+    font-family:var(--mono);
+    font-weight:800;
+    font-size:78px;
+    line-height:.95;
+    letter-spacing:-.03em;
+  }
+  .bignum .unit{font-size:24px;color:var(--muted);font-weight:500;margin-left:6px}
+  .verdict .say{margin-top:14px;color:var(--text);font-size:15px;max-width:42ch}
+  .verdict .say b{font-weight:600}
+
+  /* breakdown ledger */
+  .ledger{
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .ledger .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:13px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .ledger .row:last-child{border-bottom:none}
+  .ledger .row .k{color:var(--muted);font-size:13px}
+  .ledger .row .k small{display:block;font-size:11px;color:#566069;font-family:var(--mono)}
+  .ledger .row .v{font-family:var(--mono);font-weight:500;font-size:16px}
+  .ledger .row.locked{background:#10141A}
+  .ledger .row.total{background:var(--panel)}
+  .ledger .row.total .k{color:var(--text);font-weight:600}
+  .ledger .row.total .v{font-size:18px;font-weight:700}
+
+  footer{
+    margin-top:40px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+    color:#4F5862;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.04em;
+    line-height:1.7;
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">Química Experimental · Turma B · Engenharia de Computação</div>
+    <h1>Simulador de N2<br><span class="dim">quanto preciso na Prova 2</span></h1>
+    <p class="sub">
+      N1 já está travada pelas notas do semestre. Informe a matrícula e os valores
+      hipotéticos de <code>PL10</code> e <code>PL11</code> para descobrir a nota mínima
+      na <b>P2</b> que garante média final <code>≥ 6</code>.
+    </p>
+  </header>
+
+  <div class="field">
+    <label for="mat">Matrícula</label>
+    <input id="mat" type="text" inputmode="numeric" placeholder="202600000" autocomplete="off">
+  </div>
+
+  <div class="pls">
+    <div class="field">
+      <label for="pl10">PL10 (hipotético)</label>
+      <input id="pl10" type="text" inputmode="decimal" placeholder="0">
+    </div>
+    <div class="field">
+      <label for="pl11">PL11 (hipotético)</label>
+      <input id="pl11" type="text" inputmode="decimal" placeholder="0">
+    </div>
+  </div>
+  <p class="sub" style="margin-top:-6px;margin-bottom:18px;font-size:12px">
+    Campo vazio é tratado como <code>0</code> — como se o pós-lab não tivesse sido entregue.
+  </p>
+
+  <button id="calc">Calcular P2 necessária</button>
+
+  <section id="result" class="result" aria-live="polite"></section>
+
+  <footer>
+    N1 = 0,4·média(PL1–PL5) + 0,6·P1<br>
+    N2 = 0,4·média(PL7,PL9,PL10,PL11) + 0,6·P2<br>
+    MÉDIA FINAL = (N1 + N2) / 2 · aprovação ≥ 6,00
+  </footer>
+</div>
+
+<script>
+/* ----------------------------------------------------------------
+   BASE INTERNA — não exibida em lugar nenhum.
+   [pl1,pl2,pl3,pl4,pl5, p1, pl7, pl9]
+   Matrículas totalmente zeradas (202602989, 202600682) foram removidas.
+   202604066 veio sem PL9 no PDF -> tratado como 0.
+------------------------------------------------------------------- */
+const BASE = {
+  "202604044":[7,7,5.5,7,4.5, 5.1, 6,5],
+  "202600666":[10,6.6,8,8.25,8, 9.5, 10,5],
+  "202605506":[8,7.1,0,0,0, 2, 0,0],
+  "202600669":[10,8.9,6,8.85,6, 6.9, 7,10],
+  "202603246":[0,2.7,6.5,2.6,0, 1, 0,0],
+  "202600672":[9.5,6,9.5,7.2,8, 8.1, 8.5,10],
+  "202604050":[9,8,7.5,7.4,9, 8.2, 5,10],
+  "202600673":[8.5,7.5,0,0,0, 0, 0,0],
+  "202600675":[6,7,6.5,6.55,4.5, 8.1, 8,5],
+  "202604057":[9.5,9,6,6.2,0, 7.5, 4.8,0],
+  "202604058":[0,0,5.5,0,0, 1.5, 0,0],
+  "202604061":[9.5,4,3.7,5.5,6.5, 8.5, 8.3,9],
+  "202600677":[9.5,9.5,6.5,8.6,9, 8.5, 10,10],
+  "202600679":[7.5,7.5,5,5.7,8.5, 5.5, 9.3,10],
+  "202604065":[9.5,9,7.3,7.3,0, 8.2, 9.8,5],
+  "202604066":[9.5,6.8,8.5,5.3,9, 9.5, 6,0],
+  "202302584":[9,5.6,4.5,0,0, 2, 6.5,5],
+  "202604067":[9.5,7.8,7,0,8.5, 6, 5,8.5],
+  "201900249":[7.5,6.1,9,7.2,5, 7.7, 8.8,0],
+  "202604069":[10,6.25,8.5,8.3,6, 6.7, 8.8,10]
+};
+
+/* trunca em 2 casas SEM arredondar (para exibir médias) */
+function trunc2(x){ return Math.trunc(x*100)/100; }
+/* arredonda PARA CIMA em 2 casas (para a nota exigida na P2) */
+function ceil2(x){ return Math.ceil((x - 1e-9)*100)/100; }
+/* formata em pt-BR com 2 casas */
+function fmt(x){ return x.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* lê um campo PL: vazio/ inválido => 0; trava em [0,10] */
+function readPL(el){
+  const raw = el.value.trim().replace(',','.');
+  if(raw === '') return 0;
+  let v = parseFloat(raw);
+  if(isNaN(v)) return 0;
+  return Math.max(0, Math.min(10, v));
+}
+
+const resEl = document.getElementById('result');
+
+function show(html){ resEl.innerHTML = html; resEl.classList.add('show'); }
+
+function calcular(){
+  const mat = document.getElementById('mat').value.trim();
+  const data = BASE[mat];
+
+  if(!data){
+    show(`
+      <div class="verdict is-error">
+        <div class="tag">Matrícula não encontrada</div>
+        <p class="say">Nenhum registro para <b>${mat || '—'}</b>. Confira os 9 dígitos.
+        Matrículas sem nenhuma nota lançada não constam na base.</p>
+      </div>`);
+    return;
+  }
+
+  const [a,b,c,d,e, p1, pl7, pl9] = data;
+
+  // N1 travada
+  const plN1 = (a+b+c+d+e)/5;
+  const N1 = 0.4*plN1 + 0.6*p1;
+
+  // N2 parcial + entradas hipotéticas
+  const pl10 = readPL(document.getElementById('pl10'));
+  const pl11 = readPL(document.getElementById('pl11'));
+  const plN2 = (pl7 + pl9 + pl10 + pl11)/4;
+
+  // P2 exata para média final >= 6  ->  N1 + N2 >= 12
+  const p2exata = (12 - N1 - 0.4*plN2) / 0.6;
+
+  // melhor cenário possível (P2 = 10)
+  const N2max = 0.4*plN2 + 0.6*10;
+  const mediaMax = (N1 + N2max)/2;
+
+  let cls, tag, big, say;
+
+  if(p2exata <= 0){
+    // já aprovado mesmo zerando a P2
+    cls='is-pass'; tag='Aprovação garantida';
+    big=`<div class="bignum">0,00<span class="unit">na P2</span></div>`;
+    say=`Com essa N1 e essas PLs, a média já fica <b>≥ 6</b> mesmo tirando <b>0</b> na Prova 2.
+         Qualquer nota na P2 mantém a aprovação.`;
+  } else if(p2exata > 10){
+    // impossível
+    cls='is-fail'; tag='Aprovação impossível por aqui';
+    big=`<div class="bignum">—</div>`;
+    say=`Nem tirando <b>10,00</b> na P2 a média alcança 6 com esses PL10/PL11.
+         Melhor cenário possível: média final <b>${fmt(trunc2(mediaMax))}</b>.
+         Subir as notas hipotéticas de PL10/PL11 muda esse resultado.`;
+  } else {
+    // precisa de uma nota viável
+    const p2need = ceil2(p2exata);
+    cls='is-need'; tag='Nota mínima na P2';
+    big=`<div class="bignum">${fmt(p2need)}<span class="unit">na P2</span></div>`;
+    say=`Tirando <b>${fmt(p2need)}</b> ou mais na Prova 2, a média final fecha em <b>≥ 6,00</b>.
+         Abaixo disso, reprova.`;
+  }
+
+  // valores de apoio para o ledger
+  const N2need = (p2exata>0 && p2exata<=10) ? (0.4*plN2 + 0.6*ceil2(p2exata)) : null;
+
+  let ledgerRows = `
+    <div class="row locked">
+      <div class="k">N1 <small>travada · 0,4·PL + 0,6·P1</small></div>
+      <div class="v">${fmt(trunc2(N1))}</div>
+    </div>
+    <div class="row">
+      <div class="k">Média PL da N2 <small>PL7 PL9 PL10 PL11</small></div>
+      <div class="v">${fmt(trunc2(plN2))}</div>
+    </div>`;
+
+  if(N2need!==null){
+    ledgerRows += `
+    <div class="row">
+      <div class="k">N2 necessária <small>com a P2 mínima</small></div>
+      <div class="v">${fmt(trunc2(N2need))}</div>
+    </div>
+    <div class="row total">
+      <div class="k">Média final projetada</div>
+      <div class="v">${fmt(trunc2((N1+N2need)/2))}</div>
+    </div>`;
+  } else {
+    ledgerRows += `
+    <div class="row">
+      <div class="k">N2 máxima possível <small>com P2 = 10</small></div>
+      <div class="v">${fmt(trunc2(N2max))}</div>
+    </div>
+    <div class="row total">
+      <div class="k">Média final no melhor caso</div>
+      <div class="v">${fmt(trunc2(mediaMax))}</div>
+    </div>`;
+  }
+
+  show(`
+    <div class="verdict ${cls}">
+      <div class="tag">${tag}</div>
+      ${big}
+      <p class="say">${say}</p>
+    </div>
+    <div class="ledger">${ledgerRows}</div>
+  `);
+}
+
+document.getElementById('calc').addEventListener('click', calcular);
+['mat','pl10','pl11'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', ev=>{
+    if(ev.key==='Enter') calcular();
+  });
+});
+</script>
